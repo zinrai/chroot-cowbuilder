@@ -39,20 +39,25 @@ def get_bind_mount_dir(cow_name: str) -> str:
     home_dir = os.path.expanduser("~")
     return os.path.join(home_dir, ".cowbuilder-aide", cow_name)
 
-def run_cowbuilder(operation: str, args: argparse.Namespace, base_cow: str, distribution: str, architecture: str):
-    cow_name = get_cow_name(distribution, architecture, args.role)
+def run_cowbuilder(operation: str, args: argparse.Namespace):
+    cow_name = get_cow_name(args.distribution, args.architecture, args.role)
+    base_cow = get_base_cow_path(cow_name)
     bind_mount_dir = get_bind_mount_dir(cow_name)
     os.makedirs(bind_mount_dir, exist_ok=True)
 
     cowbuilder_args = [
         "sudo", "cowbuilder", operation,
         "--basepath", base_cow,
-        "--distribution", distribution,
-        "--architecture", architecture,
+        "--distribution", args.distribution,
+        "--architecture", args.architecture,
         "--bindmounts", bind_mount_dir
     ]
 
-    cowbuilder_args.extend(args.additional_options)
+    if args.cowbuilder_args:
+        # Remove the leading '--' if present
+        if args.cowbuilder_args[0] == '--':
+            args.cowbuilder_args = args.cowbuilder_args[1:]
+        cowbuilder_args.extend(args.cowbuilder_args)
 
     logger.info(f"Running cowbuilder with args: {' '.join(cowbuilder_args)}")
     try:
@@ -61,9 +66,7 @@ def run_cowbuilder(operation: str, args: argparse.Namespace, base_cow: str, dist
         raise CowbuilderError(f"Error running cowbuilder {operation}: {e}")
 
 def create(args: argparse.Namespace):
-    cow_name = get_cow_name(args.distribution, args.architecture, args.role)
-    base_cow = get_base_cow_path(cow_name)
-
+    base_cow = get_base_cow_path(get_cow_name(args.distribution, args.architecture, args.role))
     if os.path.exists(base_cow) and not args.force:
         logger.warning(f"Base cow already exists at {base_cow}. Use --force to overwrite.")
         return
@@ -76,25 +79,23 @@ def create(args: argparse.Namespace):
             logger.error(f"Error removing existing base cow: {e}")
             return
 
-    run_cowbuilder("--create", args, base_cow, args.distribution, args.architecture)
+    run_cowbuilder("--create", args)
     logger.info(f"Successfully created new chroot environment at {base_cow}")
 
 def update(args: argparse.Namespace):
-    cow_name = get_cow_name(args.distribution, args.architecture, args.role)
-    base_cow = get_base_cow_path(cow_name)
+    base_cow = get_base_cow_path(get_cow_name(args.distribution, args.architecture, args.role))
     if not os.path.exists(base_cow):
         logger.error(f"Base cow does not exist at {base_cow}. Create it first.")
         return
-    run_cowbuilder("--update", args, base_cow, args.distribution, args.architecture)
+    run_cowbuilder("--update", args)
     logger.info(f"Successfully updated chroot environment at {base_cow}")
 
 def login(args: argparse.Namespace):
-    cow_name = get_cow_name(args.distribution, args.architecture, args.role)
-    base_cow = get_base_cow_path(cow_name)
+    base_cow = get_base_cow_path(get_cow_name(args.distribution, args.architecture, args.role))
     if not os.path.exists(base_cow):
         logger.error(f"Base cow does not exist at {base_cow}. Create it first.")
         return
-    run_cowbuilder("--login", args, base_cow, args.distribution, args.architecture)
+    run_cowbuilder("--login", args)
 
 def main():
     try:
@@ -104,26 +105,28 @@ def main():
         sys.exit(1)
 
     parser = argparse.ArgumentParser(description="cowbuilder-aide: A tool to simplify chroot environment creation and management using cowbuilder")
+    subparsers = parser.add_subparsers(dest="command", required=True)
 
-    subparsers = parser.add_subparsers(title="commands", dest="command", required=True)
-
-    # Common parser for shared arguments
+    # Common arguments
     common_parser = argparse.ArgumentParser(add_help=False)
     common_parser.add_argument("--distribution", "-d", required=True, help="Distribution (required)")
     common_parser.add_argument("--architecture", "-a", default="amd64", help="Architecture")
     common_parser.add_argument("--role", "-r", default="", help="Role")
     common_parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
-    common_parser.add_argument("additional_options", nargs="*", help="Additional cowbuilder options")
+    common_parser.add_argument("cowbuilder_args", nargs=argparse.REMAINDER, help="Additional cowbuilder options")
 
-    # Create subparser
-    create_parser = subparsers.add_parser("create", help="Create a new chroot environment", parents=[common_parser])
+    # Create command
+    create_parser = subparsers.add_parser("create", parents=[common_parser], help="Create a new chroot environment")
     create_parser.add_argument("--force", "-f", action="store_true", help="Force creation even if base cow exists")
+    create_parser.set_defaults(func=create)
 
-    # Update subparser
-    update_parser = subparsers.add_parser("update", help="Update an existing chroot environment", parents=[common_parser])
+    # Update command
+    update_parser = subparsers.add_parser("update", parents=[common_parser], help="Update an existing chroot environment")
+    update_parser.set_defaults(func=update)
 
-    # Login subparser
-    login_parser = subparsers.add_parser("login", help="Log in to a chroot environment", parents=[common_parser])
+    # Login command
+    login_parser = subparsers.add_parser("login", parents=[common_parser], help="Log in to a chroot environment")
+    login_parser.set_defaults(func=login)
 
     args = parser.parse_args()
 
@@ -131,12 +134,7 @@ def main():
         logger.setLevel(logging.DEBUG)
 
     try:
-        if args.command == "create":
-            create(args)
-        elif args.command == "update":
-            update(args)
-        elif args.command == "login":
-            login(args)
+        args.func(args)
     except CowbuilderError as e:
         logger.error(str(e))
         sys.exit(1)
