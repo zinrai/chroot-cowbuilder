@@ -37,7 +37,7 @@ def get_base_cow_path(cow_name: str) -> str:
 
 def get_bind_mount_dir(cow_name: str) -> str:
     home_dir = os.path.expanduser("~")
-    return os.path.join(home_dir, ".cowbuilder-aide", cow_name)
+    return os.path.join(home_dir, ".chroot-cowbuilder", cow_name)
 
 def run_cowbuilder(operation: str, args: argparse.Namespace):
     cow_name = get_cow_name(args.distribution, args.architecture, args.role)
@@ -104,7 +104,7 @@ def main():
         logger.error(str(e))
         sys.exit(1)
 
-    parser = argparse.ArgumentParser(description="cowbuilder-aide: A tool to simplify chroot environment creation and management using cowbuilder")
+    parser = argparse.ArgumentParser(description="chroot-cowbuilder: A tool to simplify chroot environment creation and management using cowbuilder")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # Common arguments

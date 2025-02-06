@@ -1,6 +1,6 @@
-# cowbuilder-aide
+# chroot-cowbuilder
 
-cowbuilder-aide is a Python script that simplifies the creation and management of chroot environments using cowbuilder. It provides an interface for creating, updating, and logging into cowbuilder environments.
+chroot-cowbuilder is a Python script that simplifies the creation and management of chroot environments using cowbuilder. It provides an interface for creating, updating, and logging into cowbuilder environments.
 
 ## Features
 
@@ -21,19 +21,19 @@ cowbuilder-aide is a Python script that simplifies the creation and management o
 ### Create a new environment
 
 ```
-$ ./cowbuilder-aide.py create -d sid -a amd64
+$ ./chroot-cowbuilder.py create -d sid -a amd64
 ```
 
 ### Update an existing environment
 
 ```
-$ ./cowbuilder-aide.py update -d sid -a amd64
+$ ./chroot-cowbuilder.py update -d sid -a amd64
 ```
 
 ### Login to an environment
 
 ```
-$ ./cowbuilder-aide.py login -d sid -a amd64
+$ ./chroot-cowbuilder.py login -d sid -a amd64
 ```
 
 ### Using additional cowbuilder options
@@ -41,11 +41,11 @@ $ ./cowbuilder-aide.py login -d sid -a amd64
 You can pass additional options directly to cowbuilder by using `--` followed by the options:
 
 ```
-$ ./cowbuilder-aide.py create -d bookworm -a amd64 -- --mirror http://ftp.jp.debian.org/debian --debootstrapopts --variant=minbase
+$ ./chroot-cowbuilder.py create -d bookworm -a amd64 -- --mirror http://ftp.jp.debian.org/debian --debootstrapopts --variant=minbase
 ```
 
 ```
-$ ./cowbuilder-aide.py login -d bookworm -a amd64 -- --save-after-login
+$ ./chroot-cowbuilder.py login -d bookworm -a amd64 -- --save-after-login
 ```
 
 ## Configuration
